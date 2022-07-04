@@ -12,9 +12,10 @@ class DecisionTree(Model):
         self.feature = -1
         self.cut = 0.0
         self.below_category = 0
+        self.entropy = 0.0
         return
 
-    def _calc_neg_cond_entropy(self, pos_weights, total_weights):
+    def _calc_gain(self, pos_weights, total_weights):
         pos = pos_weights / total_weights
         neg = 1 - pos
         cond_entropy0 = 0.0
@@ -29,7 +30,29 @@ class DecisionTree(Model):
             cond_entropy1 += -pos * math.log2(pos)
         if neg > 0:
             cond_entropy1 += -neg * math.log2(neg)
-        return -(total_weights * cond_entropy0 + (1 - total_weights) * cond_entropy1)
+        return self.entropy-(total_weights * cond_entropy0 + (1 - total_weights) * cond_entropy1)
+
+    def _calc_inherant_value(self, total_weights):
+        res = 0.0
+        if total_weights > 0:
+            res += -total_weights * math.log2(total_weights)
+        if total_weights < 1:
+            res += -(1-total_weights) * math.log2(1-total_weights)
+        return res
+
+    def _calc_gain_ratio(self, pos_weights, total_weights):
+
+        return self._calc_gain(pos_weights, total_weights) / self._calc_inherant_value(total_weights)
+
+    def _calc_gini(self, pos_weights, total_weights):
+        pos = pos_weights / total_weights
+        neg = 1 - pos
+        gini0 = 1 - pos ** 2 - neg ** 2
+        pos = (self.pos_weights - pos_weights) / (1 - total_weights)
+        neg = 1 - pos
+        gini1 = 1 - pos ** 2 - neg ** 2
+        return total_weights * gini0 + (1 - total_weights) * gini1
+
 
     def _calc_weights(self, train_Y, weight):
         for i in range(train_Y.shape[0]):
@@ -37,6 +60,11 @@ class DecisionTree(Model):
                 self.pos_weights += weight[i]
             else:
                 self.neg_weights += weight[i]
+        if self.pos_weights > 0:
+            self.entropy += -self.pos_weights * math.log2(self.pos_weights)
+        if self.neg_weights > 0:
+            self.entropy += -self.neg_weights * math.log2(self.neg_weights)
+        return
 
     def _evaluate_feature_i(self, train_X, train_Y, weights, i):
         pairs = []
@@ -57,7 +85,7 @@ class DecisionTree(Model):
                 pos_weights += pair[2] 
             if pairs[j][0] == pairs[j + 1][0]:
                 continue
-            neg_cond_entropy = self._calc_neg_cond_entropy(pos_weights, total_weights)
+            neg_cond_entropy = -self._calc_gini(pos_weights, total_weights)
             if neg_cond_entropy > max_neg_cond_entropy:
                 max_neg_cond_entropy_0 = neg_cond_entropy
                 cut_0 = (pairs[j][0] + pairs[j + 1][0]) / 2
@@ -65,7 +93,6 @@ class DecisionTree(Model):
                     category_0 = 1
                 else:
                     category_0 = 0
-                # if self.blocking(train_X, train_Y, weights, i, cut_0, category_0) == False:
                 max_neg_cond_entropy = max_neg_cond_entropy_0
                 cut = cut_0
                 category = category_0

@@ -1,5 +1,4 @@
 from distutils.log import error
-from tkinter import FALSE
 import numpy as np
 import math
 from model.LogisticRegressor import LogisticRegressor
@@ -47,7 +46,7 @@ class AdaBoost:
         pred = clf.predict(train_X)
         et = self._calc_err(pred, train_Y)
         if et == 0:
-            print('Get perfecr clf!')
+            print('Get perfect clf!')
             self._weak_clf.append(clf)
             self._alpha.append(1e9)
             return True
