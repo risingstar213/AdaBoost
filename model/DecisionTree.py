@@ -89,14 +89,13 @@ class DecisionTree(Model):
             if pairs[j][0] == pairs[j + 1][0]:
                 continue
             neg_cond_entropy = -self._calc_gini(pos_weights, total_weights)
-            if neg_cond_entropy > max_neg_cond_entropy:
+            cate_l = 1 if pos_weights * 2 > total_weights else 0
+            cate_r = 1 if (self.pos_weights - pos_weights) * 2 > (1 - total_weights) else 0
+            if neg_cond_entropy > max_neg_cond_entropy and cate_l != cate_r:
                 max_neg_cond_entropy = neg_cond_entropy
                 cut = (pairs[j][0] + pairs[j + 1][0]) / 2
-                category_l = 1 if pos_weights * 2 > total_weights else 0
-                category_r = 1 if (self.pos_weights - pos_weights) * 2 > (1 - total_weights) else 0
-
-                
-
+                category_l = cate_l
+                category_r = cate_r
         return (max_neg_cond_entropy, cut, category_l, category_r) # 
 
     def blocking(self, train_X, train_Y, weights, feature, cut, c):
@@ -122,8 +121,6 @@ class DecisionTree(Model):
         cut = 0.0
         category_l, category_r = 0.0, 0.0
         for i in range(train_X.shape[1]):
-            if i == refusal:
-                continue
             ce, c, cate_l, cate_r = self._evaluate_feature_i(train_X, train_Y, weights, i)
             if ce > max_neg_cond_entropy:
                 (feature, max_neg_cond_entropy, cut, category_l, category_r) = (i, ce, c, cate_l, cate_r)

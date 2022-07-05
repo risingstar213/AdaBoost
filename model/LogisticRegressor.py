@@ -7,7 +7,7 @@ class LogisticRegressor(Model):
         self.b = 0.0
         self.length = 0
         self.lr = 0.01
-        self.max_iter = 1000
+        self.max_iter = 500
         return
 
     def build(self, train_X):
