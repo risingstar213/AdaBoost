@@ -1,4 +1,5 @@
 from calendar import c
+from cmath import inf
 import math
 from model.core import Model
 import numpy as np
@@ -11,7 +12,8 @@ class DecisionTree(Model):
         self.neg_weights = 0.0
         self.feature = -1
         self.cut = 0.0
-        self.below_category = 0
+        self.left_category = 0
+        self.right_category = 0
         self.entropy = 0.0
         return
 
@@ -77,7 +79,8 @@ class DecisionTree(Model):
 
         max_neg_cond_entropy = -1e18
         cut = 0.0
-        category = 0.0
+        category_l = 0.0
+        category_r = 0.0
         for j in range(len(pairs) - 1):
             pair = pairs[j]
             total_weights += pair[2]
@@ -87,17 +90,14 @@ class DecisionTree(Model):
                 continue
             neg_cond_entropy = -self._calc_gini(pos_weights, total_weights)
             if neg_cond_entropy > max_neg_cond_entropy:
-                max_neg_cond_entropy_0 = neg_cond_entropy
-                cut_0 = (pairs[j][0] + pairs[j + 1][0]) / 2
-                if pos_weights * 2 > total_weights:
-                    category_0 = 1
-                else:
-                    category_0 = 0
-                max_neg_cond_entropy = max_neg_cond_entropy_0
-                cut = cut_0
-                category = category_0
+                max_neg_cond_entropy = neg_cond_entropy
+                cut = (pairs[j][0] + pairs[j + 1][0]) / 2
+                category_l = 1 if pos_weights * 2 > total_weights else 0
+                category_r = 1 if (self.pos_weights - pos_weights) * 2 > (1 - total_weights) else 0
 
-        return (max_neg_cond_entropy, cut, category) # 
+                
+
+        return (max_neg_cond_entropy, cut, category_l, category_r) # 
 
     def blocking(self, train_X, train_Y, weights, feature, cut, c):
         res = []
@@ -118,27 +118,28 @@ class DecisionTree(Model):
     def train_with_weights(self, train_X, train_Y, weights):
         self._calc_weights(train_Y, weights)
         feature = -1
-        max_neg_cond_entropy = -1e18
+        max_neg_cond_entropy = -inf
         cut = 0.0
-        category = 0.0
+        category_l, category_r = 0.0, 0.0
         for i in range(train_X.shape[1]):
             if i == refusal:
                 continue
-            ce, c, cate = self._evaluate_feature_i(train_X, train_Y, weights, i)
+            ce, c, cate_l, cate_r = self._evaluate_feature_i(train_X, train_Y, weights, i)
             if ce > max_neg_cond_entropy:
-                (feature, max_neg_cond_entropy, cut, category) = (i, ce, c, cate)
+                (feature, max_neg_cond_entropy, cut, category_l, category_r) = (i, ce, c, cate_l, cate_r)
         self.feature = feature
         self.cut = cut
-        self.below_category = category
+        self.left_category = category_l
+        self.right_category = category_r
 
     def evaluate(self, X):
         res = []
         for i in range(X.shape[0]):
             feat = X[i, self.feature]
             if feat <= self.cut:
-                res.append(self.below_category)
+                res.append(self.left_category)
             else:
-                res.append(1 - self.below_category)
+                res.append(self.right_category)
         return np.array(res)
 
     def predict(self, X):

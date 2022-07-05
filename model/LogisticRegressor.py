@@ -13,6 +13,7 @@ class LogisticRegressor(Model):
     def build(self, train_X):
         self.length = train_X.shape[1]
         self.w = np.random.normal(size = (self.length))
+        self.b = np.random.normal()
         return
 
     def sigmoid(self, z):
